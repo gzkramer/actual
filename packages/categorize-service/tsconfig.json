@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "lib": ["ES2023"],
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "declarationMap": true,
+    "strict": true,
+    "rootDir": "..",
+    "outDir": "@types",
+    "tsBuildInfoFile": "@types/.tsbuildinfo",
+    "types": ["node", "vitest/globals"]
+  },
+  "include": [
+    "src/**/*",
+    "vite.config.mts",
+    "vitest.config.ts",
+    // Checked against the contract in src/contract-compat.ts
+    "../loot-core/src/server/smart-categorize/types.ts"
+  ],
+  "exclude": ["node_modules", "build", "@types"]
+}

@@ -48,6 +48,7 @@ import { theme } from '@actual-app/components/theme';
 import { Tooltip } from '@actual-app/components/tooltip';
 import { View } from '@actual-app/components/view';
 import { send } from '@actual-app/core/platform/client/connection';
+import type { CategorySuggestion } from '@actual-app/core/server/smart-categorize/types';
 import { memoizeOne } from '@actual-app/core/shared/memoize';
 import * as monthUtils from '@actual-app/core/shared/months';
 import { q } from '@actual-app/core/shared/query';
@@ -131,6 +132,7 @@ import { useProperFocus } from '#hooks/useProperFocus';
 import { useResizeObserver } from '#hooks/useResizeObserver';
 import { useSelectedDispatch, useSelectedItems } from '#hooks/useSelected';
 import { SheetNameProvider } from '#hooks/useSheetName';
+import { useSmartCategorySuggestions } from '#hooks/useSmartCategorySuggestions';
 import { useSplitsExpanded } from '#hooks/useSplitsExpanded';
 import type { SplitsExpandedContextValue } from '#hooks/useSplitsExpanded';
 import { useSyncedPref } from '#hooks/useSyncedPref';
@@ -147,6 +149,7 @@ import {
   isFutureTransaction,
 } from '#util/schedule-actions';
 
+import { SmartCategorySuggestion } from './SmartCategorySuggestion';
 import {
   isTransactionTableColumnAvailableInChildRows,
   isTransactionTableColumnDisplayOnly,
@@ -1010,6 +1013,8 @@ type TransactionProps = {
   onBatchLinkSchedule?: (ids: TransactionEntity['id'][]) => void;
   onBatchUnlinkSchedule?: (ids: TransactionEntity['id'][]) => void;
   onCreateRule?: (ids: TransactionEntity['id'][]) => void;
+  onIntelligentCategorize?: (ids: TransactionEntity['id'][]) => void;
+  smartSuggestions?: CategorySuggestion[];
   onScheduleAction?: (
     name: 'skip' | 'post-transaction' | 'post-transaction-today' | 'complete',
     ids: TransactionEntity['id'][],
@@ -1073,6 +1078,8 @@ const Transaction = memo(function Transaction({
   onBatchLinkSchedule,
   onBatchUnlinkSchedule,
   onCreateRule,
+  onIntelligentCategorize,
+  smartSuggestions,
   onScheduleAction,
   onMakeAsNonSplitTransactions,
   onSplit,
@@ -1544,6 +1551,7 @@ const Transaction = memo(function Transaction({
     onLinkSchedule: ids => onBatchLinkSchedule?.(ids),
     onUnlinkSchedule: ids => onBatchUnlinkSchedule?.(ids),
     onCreateRule: ids => onCreateRule?.(ids),
+    onIntelligentCategorize,
     onScheduleAction: (name, ids) => onScheduleAction?.(name, ids),
     onMakeAsNonSplitTransactions: ids => onMakeAsNonSplitTransactions?.(ids),
   });
@@ -1931,6 +1939,22 @@ const Transaction = memo(function Transaction({
             }
             exposed={focusedField === 'category'}
             onExpose={name => !isPreview && onEdit(id, name)}
+            unexposedContent={
+              !categoryId && smartSuggestions && smartSuggestions.length > 0
+                ? cellProps => (
+                    <>
+                      <SmartCategorySuggestion
+                        transactionId={transaction.id}
+                        suggestions={smartSuggestions}
+                        onSelectCategory={suggestedId =>
+                          onUpdate('category', suggestedId)
+                        }
+                      />
+                      <UnexposedCellContent {...cellProps} />
+                    </>
+                  )
+                : undefined
+            }
             valueStyle={
               !categoryId
                 ? {
@@ -2648,6 +2672,7 @@ type TransactionTableInnerProps = {
   sortField: string;
   ascDesc: 'asc' | 'desc';
   onCreateRule: (ids: RuleEntity['id'][]) => void;
+  onIntelligentCategorize?: (ids: TransactionEntity['id'][]) => void;
   onScheduleAction: (
     name: 'skip' | 'post-transaction' | 'post-transaction-today' | 'complete',
     ids: TransactionEntity['id'][],
@@ -2693,6 +2718,17 @@ function TransactionTableInner({
 }: TransactionTableInnerProps) {
   const containerRef = createRef<HTMLDivElement>();
   const isAddingPrev = usePrevious(props.isAdding);
+  const smartSuggestions = useSmartCategorySuggestions(
+    props.transactions
+      .filter(
+        t =>
+          !t.category &&
+          !t.is_parent &&
+          !isPreviewId(t.id) &&
+          !isTemporaryId(t.id),
+      )
+      .map(t => t.id),
+  );
   const [scrollWidth, setScrollWidth] = useState(0);
 
   function saveScrollWidth(parent: number, child: number) {
@@ -2864,6 +2900,8 @@ function TransactionTableInner({
         onBatchLinkSchedule={props.onBatchLinkSchedule}
         onBatchUnlinkSchedule={props.onBatchUnlinkSchedule}
         onCreateRule={props.onCreateRule}
+        onIntelligentCategorize={props.onIntelligentCategorize}
+        smartSuggestions={smartSuggestions[trans.id]}
         onScheduleAction={props.onScheduleAction}
         onMakeAsNonSplitTransactions={props.onMakeAsNonSplitTransactions}
         onSplit={props.onSplit}
@@ -3069,6 +3107,7 @@ export type TransactionTableProps = {
   onBatchLinkSchedule: (ids: TransactionEntity['id'][]) => void;
   onBatchUnlinkSchedule: (ids: TransactionEntity['id'][]) => void;
   onCreateRule: (ids: RuleEntity['id'][]) => void;
+  onIntelligentCategorize?: (ids: TransactionEntity['id'][]) => void;
   onScheduleAction: (
     name: 'skip' | 'post-transaction' | 'post-transaction-today' | 'complete',
     ids: TransactionEntity['id'][],

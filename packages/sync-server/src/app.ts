@@ -18,6 +18,7 @@ import * as openidApp from './app-openid';
 import * as pluggai from './app-pluggyai/app-pluggyai';
 import * as secretApp from './app-secrets';
 import * as simpleFinApp from './app-simplefin/app-simplefin';
+import * as smartCategorizeApp from './app-smart-categorize';
 import * as syncApp from './app-sync';
 import { config } from './load-config';
 
@@ -72,6 +73,8 @@ app.use('/secret', secretApp.handlers);
 if (config.get('corsProxy.enabled')) {
   app.use('/cors-proxy', corsApp.handlers);
 }
+
+app.use('/smart-categorize', smartCategorizeApp.handlers);
 
 app.use('/admin', adminApp.handlers);
 app.use('/openid', openidApp.handlers);

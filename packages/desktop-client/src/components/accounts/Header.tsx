@@ -8,6 +8,7 @@ import { Button } from '@actual-app/components/button';
 import { AnimatedLoading } from '@actual-app/components/icons/AnimatedLoading';
 import {
   SvgAdd,
+  SvgBolt,
   SvgDotsHorizontalTriple,
 } from '@actual-app/components/icons/v1';
 import {
@@ -60,6 +61,7 @@ type AccountHeaderProps = {
   tableRef: TableRef;
   isNameEditable: boolean;
   workingHard: boolean;
+  smartCategorizeProgress?: { processed: number; total: number } | null;
   accountName: string;
   accountId?: string;
   account?: AccountEntity;
@@ -99,6 +101,10 @@ type AccountHeaderProps = {
   onReconcile: ComponentProps<typeof ReconcileMenu>['onReconcile'];
   onBatchEdit: ComponentProps<typeof SelectedTransactionsButton>['onEdit'];
   onRunRules: ComponentProps<typeof SelectedTransactionsButton>['onRunRules'];
+  onIntelligentCategorize: ComponentProps<
+    typeof SelectedTransactionsButton
+  >['onIntelligentCategorize'];
+  onIntelligentCategorizeAll: () => void;
   onBatchDelete: ComponentProps<typeof SelectedTransactionsButton>['onDelete'];
   onBatchDuplicate: ComponentProps<
     typeof SelectedTransactionsButton
@@ -132,6 +138,7 @@ export function AccountHeader({
   tableRef,
   isNameEditable,
   workingHard,
+  smartCategorizeProgress,
   accountName,
   accountId,
   account,
@@ -178,11 +185,14 @@ export function AccountHeader({
   onScheduleAction,
   onSetTransfer,
   onRunRules,
+  onIntelligentCategorize,
+  onIntelligentCategorizeAll,
   onMakeAsSplitTransaction,
   onMakeAsNonSplitTransactions,
   onMergeTransactions,
 }: AccountHeaderProps) {
   const { t } = useTranslation();
+  const smartCategorizationEnabled = useFeatureFlag('smartCategorization');
 
   const [reconcileOpen, setReconcileOpen] = useState(false);
   const searchInput = useRef<HTMLInputElement>(null);
@@ -361,6 +371,25 @@ export function AccountHeader({
             </Button>
           )}
 
+          {smartCategorizationEnabled && !showEmptyMessage && (
+            <Button
+              variant="bare"
+              onPress={onIntelligentCategorizeAll}
+              isDisabled={workingHard}
+            >
+              <SvgBolt width={11} height={11} style={{ marginRight: 4 }} />
+              {smartCategorizeProgress ? (
+                <Trans>
+                  Categorizing{' '}
+                  {{ processed: smartCategorizeProgress.processed }}
+                  of {{ total: smartCategorizeProgress.total }}
+                </Trans>
+              ) : (
+                <Trans>Intelligently Categorize</Trans>
+              )}
+            </Button>
+          )}
+
           {!showEmptyMessage && (
             <Button variant="bare" onPress={onAddTransaction}>
               <SvgAdd width={10} height={10} style={{ marginRight: 3 }} />
@@ -391,6 +420,7 @@ export function AccountHeader({
               onDelete={onBatchDelete}
               onEdit={onBatchEdit}
               onRunRules={onRunRules}
+              onIntelligentCategorize={onIntelligentCategorize}
               onLinkSchedule={onBatchLinkSchedule}
               onUnlinkSchedule={onBatchUnlinkSchedule}
               onCreateRule={onCreateRule}

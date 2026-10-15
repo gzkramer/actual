@@ -6,6 +6,7 @@
     { "path": "./packages/loot-core" },
     { "path": "./packages/api" },
     { "path": "./packages/desktop-client" },
+    { "path": "./packages/categorize-service" },
     { "path": "./packages/sync-server" },
     { "path": "./packages/desktop-electron" },
     { "path": "./packages/cli" }

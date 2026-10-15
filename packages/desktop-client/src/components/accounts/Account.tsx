@@ -65,6 +65,7 @@ import { usePayees } from '#hooks/usePayees';
 import { getSchedulesQuery } from '#hooks/useSchedules';
 import { SelectedProviderWithItems } from '#hooks/useSelected';
 import type { Actions } from '#hooks/useSelected';
+import { invalidateSmartCategorySuggestions } from '#hooks/useSmartCategorySuggestions';
 import {
   SplitsExpandedProvider,
   useSplitsExpanded,
@@ -190,6 +191,32 @@ function AllTransactions({
   return children(allTransactions, allBalances);
 }
 
+function smartCategorizeErrorMessage(error: string) {
+  switch (error) {
+    case 'no-server':
+    case 'not-enabled':
+      return t('Smart categorization needs a sync server.');
+    case 'not-configured':
+      return t('Smart categorization is not set up yet.');
+    case 'service-unavailable':
+      return t(
+        "The categorization service isn't reachable. Check that it's running.",
+      );
+    case 'provider-unavailable':
+      return t(
+        'Claude did not accept the saved token. It may have expired or been revoked.',
+      );
+    case 'busy':
+      return t('The categorization service is busy. Try again in a moment.');
+    case 'not-logged-in':
+    case 'token-expired':
+    case 'unauthorized':
+      return t('Log in to the sync server to use smart categorization.');
+    default:
+      return t('Smart categorization failed ({{error}}).', { error });
+  }
+}
+
 function getField(field?: string) {
   if (!field) {
     return 'date';
@@ -272,6 +299,7 @@ type AccountInternalState = {
   filterConditionsOp: 'and' | 'or';
   loading: boolean;
   workingHard: boolean;
+  smartCategorizeProgress: { processed: number; total: number } | null;
   reconcileAmount: null | number;
   transactions: TransactionEntity[];
   transactionsFiltered?: boolean;
@@ -324,6 +352,7 @@ class AccountInternal extends PureComponent<
       filterConditionsOp: 'and',
       loading: true,
       workingHard: false,
+      smartCategorizeProgress: null,
       reconcileAmount: null,
       transactions: [],
       showBalances: props.showBalances,
@@ -386,7 +415,15 @@ class AccountInternal extends PureComponent<
       undo.setUndoState('undoEvent', null);
     };
 
-    const unlistens = [listen('undo-event', onUndo)];
+    const unlistens = [
+      listen('undo-event', onUndo),
+      listen('smart-categorize-progress', ({ processed, total }) => {
+        // Show each batch's results as soon as the server applies them.
+        this.setState({ smartCategorizeProgress: { processed, total } });
+        invalidateSmartCategorySuggestions();
+        void this.refetchTransactions();
+      }),
+    ];
 
     this.unlisten = () => {
       unlistens.forEach(unlisten => unlisten());
@@ -779,6 +816,107 @@ class AccountInternal extends PureComponent<
     } finally {
       this.setState({ workingHard: false });
     }
+  };
+
+  openSmartCategorizeSetup = (ids: string[]) => {
+    this.props.dispatch(
+      pushModal({
+        modal: {
+          name: 'smart-categorize-init',
+          options: { onSuccess: () => void this.onIntelligentCategorize(ids) },
+        },
+      }),
+    );
+  };
+
+  onIntelligentCategorize = async (ids: string[]) => {
+    try {
+      this.setState({
+        workingHard: true,
+        smartCategorizeProgress: { processed: 0, total: ids.length },
+      });
+      const result =
+        ids.length === 1
+          ? await send('smart-categorize/suggest-one', { id: ids[0] })
+          : await send('smart-categorize/suggest-batch', { ids });
+
+      invalidateSmartCategorySuggestions();
+      await this.refetchTransactions();
+
+      if (result.error) {
+        const needsToken =
+          result.error === 'not-configured' ||
+          result.error === 'provider-unavailable';
+        this.props.dispatch(
+          addNotification({
+            notification: {
+              type: 'error',
+              message: smartCategorizeErrorMessage(result.error),
+              ...(needsToken && {
+                sticky: true,
+                button: {
+                  title: t('Set up'),
+                  action: () => this.openSmartCategorizeSetup(ids),
+                },
+              }),
+            },
+          }),
+        );
+        return;
+      }
+
+      this.props.dispatch(
+        addNotification({
+          notification: {
+            type: result.failed > 0 ? 'warning' : 'message',
+            message: t(
+              '{{categorized}} categorized, {{needsReview}} left with suggestions, {{failed}} failed.',
+              {
+                categorized: result.categorized,
+                needsReview: result.needsReview,
+                failed: result.failed,
+              },
+            ),
+          },
+        }),
+      );
+    } catch (error) {
+      console.error('Error running smart categorization:', error);
+      this.props.dispatch(
+        addNotification({
+          notification: {
+            type: 'error',
+            message: t('Failed to run smart categorization'),
+          },
+        }),
+      );
+    } finally {
+      this.setState({ workingHard: false, smartCategorizeProgress: null });
+    }
+  };
+
+  onIntelligentCategorizeAll = async () => {
+    const { accountId } = this.props;
+    const ids = await send('smart-categorize/uncategorized-ids', {
+      accountId:
+        accountId && !SPECIAL_VIEW_IDS.includes(accountId)
+          ? accountId
+          : undefined,
+    });
+
+    if (ids.length === 0) {
+      this.props.dispatch(
+        addNotification({
+          notification: {
+            type: 'message',
+            message: t('There are no uncategorized transactions.'),
+          },
+        }),
+      );
+      return;
+    }
+
+    await this.onIntelligentCategorize(ids);
   };
 
   onAddTransaction = () => {
@@ -1858,6 +1996,7 @@ class AccountInternal extends PureComponent<
                 tableRef={this.table}
                 isNameEditable={isNameEditable ?? false}
                 workingHard={workingHard ?? false}
+                smartCategorizeProgress={this.state.smartCategorizeProgress}
                 accountId={accountId}
                 account={account}
                 filterId={filterId}
@@ -1895,6 +2034,8 @@ class AccountInternal extends PureComponent<
                 onBatchDelete={this.onBatchDelete}
                 onBatchDuplicate={this.onBatchDuplicate}
                 onRunRules={this.onRunRules}
+                onIntelligentCategorize={this.onIntelligentCategorize}
+                onIntelligentCategorizeAll={this.onIntelligentCategorizeAll}
                 onBatchEdit={this.onBatchEdit}
                 onBatchLinkSchedule={this.onBatchLinkSchedule}
                 onBatchUnlinkSchedule={this.onBatchUnlinkSchedule}
@@ -1979,6 +2120,7 @@ class AccountInternal extends PureComponent<
                   onBatchLinkSchedule={this.onBatchLinkSchedule}
                   onBatchUnlinkSchedule={this.onBatchUnlinkSchedule}
                   onCreateRule={this.onCreateRule}
+                  onIntelligentCategorize={this.onIntelligentCategorize}
                   onScheduleAction={this.onScheduleAction}
                   onMakeAsNonSplitTransactions={
                     this.onMakeAsNonSplitTransactions

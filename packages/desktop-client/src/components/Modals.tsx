@@ -76,6 +76,7 @@ import { PluggyAiInitialiseModal } from './modals/PluggyAiInitialiseModal';
 import { ScheduledTransactionMenuModal } from './modals/ScheduledTransactionMenuModal';
 import { SelectLinkedAccountsModal } from './modals/SelectLinkedAccountsModal';
 import { SimpleFinInitialiseModal } from './modals/SimpleFinInitialiseModal';
+import { SmartCategorizeInitialiseModal } from './modals/SmartCategorizeInitialiseModal';
 import { TrackingBalanceMenuModal } from './modals/TrackingBalanceMenuModal';
 import { TrackingBudgetMenuModal } from './modals/TrackingBudgetMenuModal';
 import { TrackingBudgetMonthMenuModal } from './modals/TrackingBudgetMonthMenuModal';
@@ -195,6 +196,11 @@ export function Modals() {
 
         case 'simplefin-init':
           return <SimpleFinInitialiseModal key={key} {...modal.options} />;
+
+        case 'smart-categorize-init':
+          return (
+            <SmartCategorizeInitialiseModal key={key} {...modal.options} />
+          );
 
         case 'pluggyai-init':
           return <PluggyAiInitialiseModal key={key} {...modal.options} />;

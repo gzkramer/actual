@@ -132,6 +132,12 @@ export type Modal =
       };
     }
   | {
+      name: 'smart-categorize-init';
+      options: {
+        onSuccess?: () => void;
+      };
+    }
+  | {
       name: 'pluggyai-init';
       options: {
         onSuccess: (perBudgetFile: boolean) => void;

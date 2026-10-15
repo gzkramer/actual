@@ -298,6 +298,24 @@ const configSchema = convict({
       env: 'ACTUAL_CORS_PROXY_ENABLED',
     },
   },
+
+  smartCategorize: {
+    doc: 'Smart categorization service configuration.',
+
+    serviceUrl: {
+      doc: 'Base URL of the categorize service. Smart categorization reports itself as not configured until this is set.',
+      format: String,
+      default: '',
+      env: 'ACTUAL_SMART_CATEGORIZE_URL',
+    },
+
+    timeoutMs: {
+      doc: 'How long to wait for the categorize service, in milliseconds.',
+      format: 'nat',
+      default: 270000,
+      env: 'ACTUAL_SMART_CATEGORIZE_TIMEOUT_MS',
+    },
+  },
 });
 
 let configPath = null;

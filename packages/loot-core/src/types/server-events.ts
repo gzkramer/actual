@@ -98,6 +98,15 @@ type ImportProgressEvent = {
 };
 
 type PrefsUpdatedEvent = undefined;
+
+type SmartCategorizeProgressEvent = {
+  /** Transactions classified so far in this run. */
+  processed: number;
+  total: number;
+  categorized: number;
+  needsReview: number;
+};
+
 type SchedulesOfflineEvent = undefined;
 type ServerErrorEvent = undefined;
 type ShowBudgetsEvent = undefined;
@@ -118,6 +127,7 @@ export type ServerEvents = {
   'schedules-offline': SchedulesOfflineEvent;
   'server-error': ServerErrorEvent;
   'show-budgets': ShowBudgetsEvent;
+  'smart-categorize-progress': SmartCategorizeProgressEvent;
   'start-import': StartImportEvent;
   'start-load': StartLoadEvent;
   'sync-event': SyncEvent;

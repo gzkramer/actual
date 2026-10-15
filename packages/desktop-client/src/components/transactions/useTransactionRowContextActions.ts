@@ -12,6 +12,7 @@ import type { TransactionEntity } from '@actual-app/core/types/models';
 
 import type { ContextMenuItem } from '#contextmenu/types';
 import { useContextMenu } from '#hooks/useContextMenu';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { useSchedules } from '#hooks/useSchedules';
 import { useSelectedItems } from '#hooks/useSelected';
 import { pushModal } from '#modals/modalsSlice';
@@ -26,6 +27,7 @@ type TransactionRowContextMenuProps = {
   onLinkSchedule: (ids: string[]) => void;
   onUnlinkSchedule: (ids: string[]) => void;
   onCreateRule: (ids: string[]) => void;
+  onIntelligentCategorize?: (ids: string[]) => void;
   onScheduleAction: (
     name: 'skip' | 'post-transaction' | 'post-transaction-today' | 'complete',
     ids: TransactionEntity['id'][],
@@ -42,10 +44,12 @@ export function useTransactionRowContextActions({
   onLinkSchedule,
   onUnlinkSchedule,
   onCreateRule,
+  onIntelligentCategorize,
   onScheduleAction,
   onMakeAsNonSplitTransactions,
 }: TransactionRowContextMenuProps) {
   const { t } = useTranslation();
+  const smartCategorizationEnabled = useFeatureFlag('smartCategorization');
   const dispatch = useDispatch();
   const selectedItems = useSelectedItems();
 
@@ -220,6 +224,12 @@ export function useTransactionRowContextActions({
       text: t('Create rule'),
       onClick: () => onCreateRule(selectedIds),
       hidden: linked,
+    },
+    {
+      name: 'intelligent-categorize',
+      text: t('Intelligently Categorize'),
+      onClick: () => onIntelligentCategorize?.(selectedIds),
+      hidden: !smartCategorizationEnabled || !onIntelligentCategorize,
     },
     {
       name: 'unsplit-transactions',

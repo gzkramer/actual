@@ -10,8 +10,38 @@ services:
     image: actual-development
     environment:
       - HTTPS
+      # Smart categorization: run the sync server alongside the web app and
+      # proxy /smart-categorize to the categorize service.
+      - ACTUAL_DEV_START=start:server-dev
+      - ACTUAL_SMART_CATEGORIZE_URL=http://categorize:8080
     ports:
       - '3001:3001'
+      - '5006:5006'
     volumes:
       - '.:/app'
     restart: 'no'
+    depends_on:
+      categorize:
+        condition: service_started
+
+  # Runs the claude CLI for smart categorization. It holds no credentials:
+  # the sync server sends the Claude token saved in the app with each
+  # request. Only reachable from the dev container.
+  categorize:
+    build:
+      context: .
+      dockerfile: packages/categorize-service/Dockerfile
+    image: actual-categorize-service
+    expose:
+      - '8080'
+    read_only: true
+    tmpfs:
+      - /tmp
+      # The CLI writes its settings and cache under $HOME.
+      - /home/node:uid=1000,gid=1000
+    healthcheck:
+      test: ['CMD', 'node', 'scripts/health-check.js']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: 'unless-stopped'

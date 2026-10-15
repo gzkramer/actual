@@ -22,6 +22,8 @@ packages/api/e2e/consumer/dist
 packages/api/@types
 packages/api/test-results
 packages/api/playwright-report
+packages/categorize-service/@types
+packages/categorize-service/test-results
 packages/crdt/dist
 packages/desktop-client/build-stats
 packages/desktop-client/dev-dist
@@ -116,3 +118,6 @@ storybook-static
 .actualrc.yaml
 .actualrc.yml
 actual.config.js
+
+# Local env files; never commit secrets
+.env

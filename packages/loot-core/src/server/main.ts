@@ -35,6 +35,7 @@ import { app as reportsApp } from './reports/app';
 import { app as rulesApp } from './rules/app';
 import { app as schedulesApp } from './schedules/app';
 import { getServer, setServer } from './server-config';
+import { app as smartCategorizeApp } from './smart-categorize/app';
 import { app as spreadsheetApp } from './spreadsheet/app';
 import { fullSync, setSyncingMode } from './sync';
 import { app as syncApp } from './sync/app';
@@ -152,6 +153,7 @@ app.combine(
   budgetFilesApp,
   encryptionApp,
   tagsApp,
+  smartCategorizeApp,
 );
 
 export function getDefaultDocumentDir() {

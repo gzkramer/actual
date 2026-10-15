@@ -5,6 +5,7 @@ import { Trans } from 'react-i18next';
 import { Text } from '@actual-app/components/text';
 import { theme } from '@actual-app/components/theme';
 import { View } from '@actual-app/components/view';
+import { send } from '@actual-app/core/platform/client/connection';
 import type { FeatureFlag, ServerPrefs } from '@actual-app/core/types/prefs';
 
 import { useAuth } from '#auth/AuthProvider';
@@ -17,6 +18,7 @@ import { useServerPref } from '#hooks/useServerPref';
 import { useSyncedPref } from '#hooks/useSyncedPref';
 import { useSyncServerStatus } from '#hooks/useSyncServerStatus';
 
+import { SmartCategorizeSetup } from './SmartCategorizeSetup';
 import { Setting } from './UI';
 
 type FeatureToggleProps = {
@@ -26,6 +28,7 @@ type FeatureToggleProps = {
   children: ReactNode;
   feedbackLink?: string;
   note?: ReactNode;
+  onEnable?: () => void;
 };
 
 function FeatureToggle({
@@ -35,6 +38,7 @@ function FeatureToggle({
   error,
   children,
   note,
+  onEnable,
 }: FeatureToggleProps) {
   const enabled = useFeatureFlag(flagName);
   const [_, setFlagPref] = useSyncedPref(`flags.${flagName}`);
@@ -45,6 +49,9 @@ function FeatureToggle({
         checked={enabled}
         onChange={() => {
           setFlagPref(String(!enabled));
+          if (!enabled) {
+            onEnable?.();
+          }
         }}
         disabled={disableToggle}
       />
@@ -249,6 +256,23 @@ export function ExperimentalFeatures() {
               feedbackLink="https://github.com/actualbudget/actual/issues/8020"
             >
               <Trans>Akahu Bank Sync (NZ banks)</Trans>
+            </FeatureToggle>
+            <FeatureToggle
+              flag="smartCategorization"
+              onEnable={() => {
+                void send('smart-categorize/seed-defaults');
+              }}
+              note={
+                <>
+                  <Trans>
+                    Payee names and amounts are sent to Claude through your sync
+                    server and its categorization service.
+                  </Trans>{' '}
+                  <SmartCategorizeSetup />
+                </>
+              }
+            >
+              <Trans>Smart Categorization</Trans>
             </FeatureToggle>
             {showServerPrefs && (
               <ServerFeatureToggle

@@ -14,6 +14,7 @@ import { validForTransfer } from '@actual-app/core/shared/transfer';
 import type { TransactionEntity } from '@actual-app/core/types/models';
 
 import { SelectedItemsButton } from '#components/table';
+import { useFeatureFlag } from '#hooks/useFeatureFlag';
 import { useSchedules } from '#hooks/useSchedules';
 import { useSelectedItems } from '#hooks/useSelected';
 import { pushModal } from '#modals/modalsSlice';
@@ -39,6 +40,7 @@ type SelectedTransactionsButtonProps = {
   onUnlinkSchedule: (selectedIds: string[]) => void;
   onCreateRule: (selectedIds: string[]) => void;
   onRunRules: (selectedIds: string[]) => void;
+  onIntelligentCategorize?: (selectedIds: string[]) => void;
   onSetTransfer: (selectedIds: string[]) => void;
   onScheduleAction: (
     action: 'post-transaction' | 'post-transaction-today' | 'skip' | 'complete',
@@ -60,6 +62,7 @@ export function SelectedTransactionsButton({
   onUnlinkSchedule,
   onCreateRule,
   onRunRules,
+  onIntelligentCategorize,
   onSetTransfer,
   onScheduleAction,
   showMakeTransfer,
@@ -68,6 +71,7 @@ export function SelectedTransactionsButton({
   onMergeTransactions,
 }: SelectedTransactionsButtonProps) {
   const { t } = useTranslation();
+  const smartCategorizationEnabled = useFeatureFlag('smartCategorization');
   const dispatch = useDispatch();
   const selectedItems = useSelectedItems();
   const selectedIds = useMemo(() => [...selectedItems], [selectedItems]);
@@ -359,6 +363,14 @@ export function SelectedTransactionsButton({
                       name: 'run-rules',
                       text: t('Run Rules'),
                     } as const,
+                    ...(smartCategorizationEnabled && onIntelligentCategorize
+                      ? [
+                          {
+                            name: 'intelligent-categorize',
+                            text: t('Intelligently Categorize'),
+                          } as const,
+                        ]
+                      : []),
                   ]),
 
               ...(showMakeTransfer
@@ -449,6 +461,9 @@ export function SelectedTransactionsButton({
             break;
           case 'run-rules':
             onRunRules(selectedIds);
+            break;
+          case 'intelligent-categorize':
+            onIntelligentCategorize?.(selectedIds);
             break;
           case 'set-transfer':
             onSetTransfer(selectedIds);
